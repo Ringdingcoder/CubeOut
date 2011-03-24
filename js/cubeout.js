@@ -528,34 +528,51 @@ function translate(p, t) {
     return [p[0]+t[0], p[1]+t[1], p[2]+t[2]];
 }
 
-function rotate(p, angles) {
-    // X-axis
-    var cos = Math.cos(angles[0]);
-    var sin = Math.sin(angles[0]);
+function matmult(a, b) {
+    return [a[0]*b[0]+a[1]*b[3]+a[2]*b[6],
+	    a[0]*b[1]+a[1]*b[4]+a[2]*b[7],
+	    a[0]*b[2]+a[1]*b[5]+a[2]*b[8],
+	    a[3]*b[0]+a[4]*b[3]+a[5]*b[6],
+	    a[3]*b[1]+a[4]*b[4]+a[5]*b[7],
+	    a[3]*b[2]+a[4]*b[5]+a[5]*b[8],
+	    a[6]*b[0]+a[7]*b[3]+a[8]*b[6],
+	    a[6]*b[1]+a[7]*b[4]+a[8]*b[7],
+	    a[6]*b[2]+a[7]*b[5]+a[8]*b[8]];
+}
 
-    var x = p[0];
-    var y = p[1] * cos - p[2] * sin;
-    var z = p[1] * sin + p[2] * cos;
+function applymat(p, m) {
+    return [m[0]*p[0]+m[1]*p[1]+m[2]*p[2],
+	    m[3]*p[0]+m[4]*p[1]+m[5]*p[2],
+	    m[6]*p[0]+m[7]*p[1]+m[8]*p[2]];
+}
 
-    // Y-axis
-    cos = Math.cos(angles[1]);
-    sin = Math.sin(angles[1]);
+function rotate(p, rotmatrix) {
+    return applymat(p, rotmatrix);
+}
 
-    var a = x * cos - z * sin;
-    var b = x * sin + z * cos;
-    x = a;
-    z = b;
+function get_x_rotmatrix(angle) {
+    return [1,0,0,
+	    0,Math.cos(angle),-Math.sin(angle),
+	    0,Math.sin(angle),Math.cos(angle)];
+}
 
-    // Z-axis
-    cos = Math.cos(angles[2]);
-    sin = Math.sin(angles[2]);
+function get_y_rotmatrix(angle) {
+    return [Math.cos(angle),0,Math.sin(angle),
+	    0,1,0,
+	    -Math.sin(angle),0,Math.cos(angle)];
+}
 
-    a = x * cos - y * sin;
-    b = x * sin + y * cos;
-    x = a;
-    y = b;
+function get_z_rotmatrix(angle) {
+    return [Math.cos(angle),-Math.sin(angle),0,
+	    Math.sin(angle),Math.cos(angle),0,
+	    0,0,1];
+}
 
-    return [x,y,z];
+function get_combined_rotmatrix(angles) {
+    var mx = get_x_rotmatrix(angles[0]);
+    var my = matmult(get_y_rotmatrix(angles[1]), mx);
+    var mz = matmult(get_z_rotmatrix(angles[2]), my);
+    return mz;
 }
 
 function bbox(lines) {
@@ -1085,7 +1102,7 @@ function generate_piece(shape) {
     return {'lines':lines, 'voxels':voxels };
 }
 
-function render_piece(canvas, ctx, width, height, depth, x,y,z, piece, angles, color) {
+function render_piece(canvas, ctx, width, height, depth, x,y,z, piece, rotmatrix, color) {
     var cwidth = canvas.width;
     var cheight = canvas.height;
 
@@ -1104,8 +1121,8 @@ function render_piece(canvas, ctx, width, height, depth, x,y,z, piece, angles, c
     for(var i=0; i<piece.lines.length; ++i) {
         p1 = translate(piece.lines[i][0], [-cx,-cy,-cz]);
         p2 = translate(piece.lines[i][1], [-cx,-cy,-cz]);
-        r1 = translate(rotate(p1, angles), [x+cx,y+cy,z+cz]);
-        r2 = translate(rotate(p2, angles), [x+cx,y+cy,z+cz]);
+        r1 = translate(rotate(p1, rotmatrix), [x+cx,y+cy,z+cz]);
+        r2 = translate(rotate(p2, rotmatrix), [x+cx,y+cy,z+cz]);
 
         //ctx.lineWidth = 0.5+1.5*(depth-0.5*(r1[2]+r2[2]))/depth;
         ctx.lineWidth = 0.5+1.5*(depth-z)/depth;
@@ -1145,14 +1162,14 @@ function bbox_piece(shape) {
     return { 'width':width, 'height':height, 'depth':depth };
 }
 
-function project_voxels(piece, x,y,z, angles) {
+function project_voxels(piece, x,y,z, rotmatrix) {
     var voxels = [];
     var cx = piece.cx;
     var cy = piece.cy;
     var cz = piece.cz;
     for(var i=0; i<piece.voxels.length; ++i) {
         var p = translate(piece.voxels[i], [-cx,-cy,-cz]);
-        var r = translate(rotate(p, angles), [x+cx,y+cy,z+cz]);
+        var r = translate(rotate(p, rotmatrix), [x+cx,y+cy,z+cz]);
         r[0] = Math.floor(r[0]);
         r[1] = Math.floor(r[1]);
         r[2] = Math.floor(r[2]);
@@ -1544,6 +1561,35 @@ function handle_key(e, canvas, ctx) {
 
     var dx = 0, dy = 0, dz = 0;
     var da = [0,0,0];
+    var rot;
+
+    var rotx = [1,0,0,
+		0,0,-1,
+		0,1,0];
+    var roty = [0,0,1,
+		0,1,0,
+		-1,0,0];
+    var rotz = [0,1,0,
+		1,0,0,
+		0,0,-1];
+
+    var invert = function(m) {
+	var r = new Array(9);
+	r[0] = m[0];
+	r[1] = -m[1];
+	r[2] = -m[2];
+	r[3] = -m[3];
+	r[4] = m[4];
+	r[5] = -m[5];
+	r[6] = -m[6];
+	r[7] = -m[7];
+	r[8] = m[8];
+	return r;
+    };
+
+    var rotrx = invert(rotx);
+    var rotry = invert(roty);
+    var rotrz = invert(rotz);
 
     switch(e.which) {
     // translations
@@ -1555,12 +1601,12 @@ function handle_key(e, canvas, ctx) {
     case KEYMAP["Z-"]: translate_flag = 1; dz = -DELTA; break;
 
     // rotations
-    case KEYMAP["A+"]: rotate_flag = 1; da[0] = DELTA_ANGLE;  break;
-    case KEYMAP["A-"]: rotate_flag = 1; da[0] = -DELTA_ANGLE; break;
-    case KEYMAP["B+"]: rotate_flag = 1; da[1] = DELTA_ANGLE;  break;
-    case KEYMAP["B-"]: rotate_flag = 1; da[1] = -DELTA_ANGLE; break;
-    case KEYMAP["C+"]: rotate_flag = 1; da[2] = DELTA_ANGLE;  break;
-    case KEYMAP["C-"]: rotate_flag = 1; da[2] = -DELTA_ANGLE; break;
+    case KEYMAP["A+"]: rotate_flag = 1; da[0] = DELTA_ANGLE;  rot = rotx; break;
+    case KEYMAP["A-"]: rotate_flag = 1; da[0] = -DELTA_ANGLE; rot = invert(rotx); break;
+    case KEYMAP["B+"]: rotate_flag = 1; da[1] = DELTA_ANGLE;  rot = roty; break;
+    case KEYMAP["B-"]: rotate_flag = 1; da[1] = -DELTA_ANGLE; rot = invert(roty); break;
+    case KEYMAP["C+"]: rotate_flag = 1; da[2] = DELTA_ANGLE;  rot = rotz; break;
+    case KEYMAP["C-"]: rotate_flag = 1; da[2] = -DELTA_ANGLE; rot = invert(rotz); break;
 
     // space
     case KEYMAP["D"]: drop_flag = 1; break;
@@ -1575,7 +1621,7 @@ function handle_key(e, canvas, ctx) {
     var nvoxels;
 
     if(translate_flag) {
-        nvoxels = project_voxels(STATE.piece, STATE.new_x+dx, STATE.new_y+dy, STATE.new_z+dz, STATE.new_angles);
+        nvoxels = project_voxels(STATE.piece, STATE.new_x+dx, STATE.new_y+dy, STATE.new_z+dz, STATE.new_matrix);
         if(!is_overlap_layers(nvoxels, PIT_WIDTH,PIT_HEIGHT,PIT_DEPTH, LAYERS)) {
             STATE.new_x += dx;
             STATE.new_y += dy;
@@ -1586,7 +1632,8 @@ function handle_key(e, canvas, ctx) {
     }
 
     if(rotate_flag) {
-        nvoxels = project_voxels(STATE.piece, STATE.new_x,STATE.new_y,STATE.new_z, [STATE.new_angles[0]+da[0], STATE.new_angles[1]+da[1], STATE.new_angles[2]+da[2]]);
+	STATE.new_matrix = matmult(rot, STATE.new_matrix);
+        nvoxels = project_voxels(STATE.piece, STATE.new_x,STATE.new_y,STATE.new_z, STATE.new_matrix);
         var deltas = overlap_diff(nvoxels, PIT_WIDTH,PIT_HEIGHT,PIT_DEPTH);
         STATE.new_x += deltas[0];
         STATE.new_y += deltas[1];
@@ -1599,7 +1646,7 @@ function handle_key(e, canvas, ctx) {
 
     if(drop_flag) {
         for(var i=0; i<PIT_DEPTH; ++i) {
-            nvoxels = project_voxels(STATE.piece, STATE.new_x,STATE.new_y,STATE.new_z+DELTA, STATE.new_angles);
+            nvoxels = project_voxels(STATE.piece, STATE.new_x,STATE.new_y,STATE.new_z+DELTA, STATE.new_matrix);
             if(!is_overlap_layers(nvoxels, PIT_WIDTH,PIT_HEIGHT,PIT_DEPTH, LAYERS)) {
                 STATE.new_z += DELTA;
                 anim_flag = 1;
@@ -1675,9 +1722,10 @@ function game_loop(canvas, ctx) {
     STATE.current_y = STATE.start_y + STATE.progress*(STATE.new_y - STATE.start_y);
     STATE.current_z = STATE.start_z + STATE.progress*(STATE.new_z - STATE.start_z);
 
-    STATE.current_angles[0] = STATE.start_angles[0] + STATE.progress*(STATE.new_angles[0] - STATE.start_angles[0]);
-    STATE.current_angles[1] = STATE.start_angles[1] + STATE.progress*(STATE.new_angles[1] - STATE.start_angles[1]);
-    STATE.current_angles[2] = STATE.start_angles[2] + STATE.progress*(STATE.new_angles[2] - STATE.start_angles[2]);
+    var angles = [STATE.progress*STATE.new_angles[0],
+		  STATE.progress*STATE.new_angles[1],
+		  STATE.progress*STATE.new_angles[2]];
+    STATE.current_matrix = matmult(get_combined_rotmatrix(angles), STATE.start_matrix);
 
     // render
     render_frame(canvas, ctx);
@@ -1687,7 +1735,7 @@ function render_frame(canvas, ctx) {
     draw_pit(canvas, ctx, PIT_WIDTH,PIT_HEIGHT,PIT_DEPTH);
     render_layers(canvas, ctx, LAYERS, STATE.refresh_layers_flag);
     if(STATE.render_piece_flag)
-        render_piece(canvas, ctx, PIT_WIDTH,PIT_HEIGHT,PIT_DEPTH, STATE.current_x,STATE.current_y,STATE.current_z, STATE.piece, STATE.current_angles, PIECE_COLOR);
+        render_piece(canvas, ctx, PIT_WIDTH,PIT_HEIGHT,PIT_DEPTH, STATE.current_x,STATE.current_y,STATE.current_z, STATE.piece, STATE.current_matrix, PIECE_COLOR);
     //if(STATE.render_shadow_flag)
     //    render_shadow(canvas, ctx, 100);
 }
@@ -1698,17 +1746,24 @@ function reset(canvas, ctx) {
     STATE.current_x = 0;
     STATE.current_y = 0;
     STATE.current_z = 0;
-    STATE.current_angles = [0,0,0];
+    STATE.current_matrix = [1,0,0,
+			    0,1,0,
+			    0,0,1];
 
     STATE.new_x = 0;
     STATE.new_y = 0;
     STATE.new_z = 0;
+    STATE.new_matrix = [1,0,0,
+			0,1,0,
+			0,0,1];
     STATE.new_angles = [0,0,0];
 
     STATE.start_x = 0;
     STATE.start_y = 0;
     STATE.start_z = 0;
-    STATE.start_angles = [0,0,0];
+    STATE.start_matrix = [1,0,0,
+			  0,1,0,
+			  0,0,1];
 
     STATE.progress = 0;
 
@@ -1723,9 +1778,8 @@ function set_start() {
     STATE.start_y = STATE.current_y;
     STATE.start_z = STATE.current_z;
 
-    STATE.start_angles[0] = STATE.current_angles[0];
-    STATE.start_angles[1] = STATE.current_angles[1];
-    STATE.start_angles[2] = STATE.current_angles[2];
+    STATE.start_matrix = STATE.current_matrix.slice(0); // copy
+    STATE.new_angles = [0,0,0];
 
     STATE.progress = 0;
 }
@@ -1734,7 +1788,7 @@ function touchdown() {
     STATE.render_piece_flag = 0;
     STATE.refresh_layers_flag = 1;
 
-    nvoxels = project_voxels(STATE.piece, STATE.new_x,STATE.new_y, STATE.new_z, STATE.new_angles);
+    nvoxels = project_voxels(STATE.piece, STATE.new_x,STATE.new_y, STATE.new_z, STATE.new_matrix);
     STATE.score += add_voxels(nvoxels, LAYERS, COUNTS);
 
     STATE.score += check_full_layers(LAYERS, COUNTS);
@@ -1753,7 +1807,7 @@ function game_over(canvas, ctx) {
 }
 
 function autofall(canvas, ctx) {
-    var nvoxels = project_voxels(STATE.piece, STATE.new_x,STATE.new_y, STATE.new_z+DELTA, STATE.new_angles);
+    var nvoxels = project_voxels(STATE.piece, STATE.new_x,STATE.new_y, STATE.new_z+DELTA, STATE.new_matrix);
     if(!is_overlap_layers(nvoxels, PIT_WIDTH,PIT_HEIGHT,PIT_DEPTH, LAYERS)) {
         set_start();
         STATE.new_z += DELTA;
