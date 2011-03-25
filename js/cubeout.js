@@ -1569,9 +1569,9 @@ function handle_key(e, canvas, ctx) {
     var roty = [0,0,1,
 		0,1,0,
 		-1,0,0];
-    var rotz = [0,1,0,
+    var rotz = [0,-1,0,
 		1,0,0,
-		0,0,-1];
+		0,0,1];
 
     var invert = function(m) {
 	var r = new Array(9);
@@ -1722,10 +1722,16 @@ function game_loop(canvas, ctx) {
     STATE.current_y = STATE.start_y + STATE.progress*(STATE.new_y - STATE.start_y);
     STATE.current_z = STATE.start_z + STATE.progress*(STATE.new_z - STATE.start_z);
 
-    var angles = [STATE.progress*STATE.new_angles[0],
-		  STATE.progress*STATE.new_angles[1],
-		  STATE.progress*STATE.new_angles[2]];
-    STATE.current_matrix = matmult(get_combined_rotmatrix(angles), STATE.start_matrix);
+    if (STATE.progress >= 1) {
+	STATE.current_matrix = STATE.new_matrix;
+	STATE.new_angles = [0,0,0];
+    }
+    else {
+	var angles = [STATE.progress*STATE.new_angles[0],
+		      STATE.progress*STATE.new_angles[1],
+		      STATE.progress*STATE.new_angles[2]];
+	STATE.current_matrix = matmult(get_combined_rotmatrix(angles), STATE.start_matrix);
+    }
 
     // render
     render_frame(canvas, ctx);
@@ -1779,7 +1785,6 @@ function set_start() {
     STATE.start_z = STATE.current_z;
 
     STATE.start_matrix = STATE.current_matrix.slice(0); // copy
-    STATE.new_angles = [0,0,0];
 
     STATE.progress = 0;
 }
