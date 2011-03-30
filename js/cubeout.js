@@ -551,20 +551,26 @@ function rotate(p, rotmatrix) {
 }
 
 function get_x_rotmatrix(angle) {
+    var cos = Math.cos(angle);
+    var sin = Math.sin(angle);
     return [1,0,0,
-	    0,Math.cos(angle),-Math.sin(angle),
-	    0,Math.sin(angle),Math.cos(angle)];
+	    0,cos,-sin,
+	    0,sin,cos];
 }
 
 function get_y_rotmatrix(angle) {
-    return [Math.cos(angle),0,Math.sin(angle),
+    var cos = Math.cos(angle);
+    var sin = Math.sin(angle);
+    return [cos,0,sin,
 	    0,1,0,
-	    -Math.sin(angle),0,Math.cos(angle)];
+	    -sin,0,cos];
 }
 
 function get_z_rotmatrix(angle) {
-    return [Math.cos(angle),-Math.sin(angle),0,
-	    Math.sin(angle),Math.cos(angle),0,
+    var cos = Math.cos(angle);
+    var sin = Math.sin(angle);
+    return [cos,-sin,0,
+	    sin,cos,0,
 	    0,0,1];
 }
 
@@ -1587,10 +1593,6 @@ function handle_key(e, canvas, ctx) {
 	return r;
     };
 
-    var rotrx = invert(rotx);
-    var rotry = invert(roty);
-    var rotrz = invert(rotz);
-
     switch(e.which) {
     // translations
     case KEYMAP["X+"]: translate_flag = 1; dx = DELTA;  break;
@@ -1638,9 +1640,7 @@ function handle_key(e, canvas, ctx) {
         STATE.new_x += deltas[0];
         STATE.new_y += deltas[1];
         STATE.new_z += deltas[2];
-        STATE.new_angles[0] += da[0];
-        STATE.new_angles[1] += da[1];
-        STATE.new_angles[2] += da[2];
+        STATE.new_angles = da;
         anim_flag = 1;
     }
 
@@ -1659,7 +1659,7 @@ function handle_key(e, canvas, ctx) {
         e.preventDefault();
     }
 
-    if(anim_flag) set_start();
+    if(anim_flag) set_start(rotate_flag);
 }
 
 function play_game(canvas, ctx, start_handler) {
@@ -1779,13 +1779,18 @@ function reset(canvas, ctx) {
     render_frame(canvas, ctx);
 }
 
-function set_start() {
+function set_start(keep_angles) {
     STATE.start_x = STATE.current_x;
     STATE.start_y = STATE.current_y;
     STATE.start_z = STATE.current_z;
 
-    STATE.start_matrix = STATE.current_matrix.slice(0); // copy
+    // snap to final rotated position
+    if (!keep_angles) {
+	STATE.current_matrix = STATE.new_matrix;
+	STATE.new_angles = [0,0,0];
+    }
 
+    STATE.start_matrix = STATE.current_matrix;
     STATE.progress = 0;
 }
 
