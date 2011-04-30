@@ -1432,6 +1432,7 @@ function pause(canvas, ctx) {
         if(AUTOFALL_DELAY)
             ID2 = setInterval(function() { autofall(canvas, ctx) }, AUTOFALL_DELAY);
         STATE.paused = 0;
+        STATE.pause_ended_flag = 1;
 
         $("#score").css("display","block");
         $("#column").css("display","block");
@@ -1669,6 +1670,7 @@ function play_game(canvas, ctx, start_handler) {
     refresh_column();
 
     STATE.paused = 0;
+    STATE.pause_ended_flag = 0;
     STATE.score = 0;
     refresh_score();
 
@@ -1709,6 +1711,7 @@ function game_loop(canvas, ctx) {
     }
     */
 
+    var prev_progress = STATE.progress;
     STATE.progress = cap(STATE.progress+ELAPSED/ANIM_DURATION, 1);
 
     if(STATE.touchdown_flag && STATE.progress>=1) {
@@ -1734,7 +1737,10 @@ function game_loop(canvas, ctx) {
     }
 
     // render
-    render_frame(canvas, ctx);
+    if (STATE.progress != prev_progress || STATE.pause_ended_flag) {
+	STATE.pause_ended_flag = 0;
+	render_frame(canvas, ctx);
+    }
 }
 
 function render_frame(canvas, ctx) {
