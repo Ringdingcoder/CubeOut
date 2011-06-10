@@ -530,20 +530,20 @@ function translate(p, t) {
 
 function matmult(a, b) {
     return [a[0]*b[0]+a[1]*b[3]+a[2]*b[6],
-	    a[0]*b[1]+a[1]*b[4]+a[2]*b[7],
-	    a[0]*b[2]+a[1]*b[5]+a[2]*b[8],
-	    a[3]*b[0]+a[4]*b[3]+a[5]*b[6],
-	    a[3]*b[1]+a[4]*b[4]+a[5]*b[7],
-	    a[3]*b[2]+a[4]*b[5]+a[5]*b[8],
-	    a[6]*b[0]+a[7]*b[3]+a[8]*b[6],
-	    a[6]*b[1]+a[7]*b[4]+a[8]*b[7],
-	    a[6]*b[2]+a[7]*b[5]+a[8]*b[8]];
+            a[0]*b[1]+a[1]*b[4]+a[2]*b[7],
+            a[0]*b[2]+a[1]*b[5]+a[2]*b[8],
+            a[3]*b[0]+a[4]*b[3]+a[5]*b[6],
+            a[3]*b[1]+a[4]*b[4]+a[5]*b[7],
+            a[3]*b[2]+a[4]*b[5]+a[5]*b[8],
+            a[6]*b[0]+a[7]*b[3]+a[8]*b[6],
+            a[6]*b[1]+a[7]*b[4]+a[8]*b[7],
+            a[6]*b[2]+a[7]*b[5]+a[8]*b[8]];
 }
 
 function applymat(p, m) {
     return [m[0]*p[0]+m[1]*p[1]+m[2]*p[2],
-	    m[3]*p[0]+m[4]*p[1]+m[5]*p[2],
-	    m[6]*p[0]+m[7]*p[1]+m[8]*p[2]];
+            m[3]*p[0]+m[4]*p[1]+m[5]*p[2],
+            m[6]*p[0]+m[7]*p[1]+m[8]*p[2]];
 }
 
 function rotate(p, rotmatrix) {
@@ -554,24 +554,24 @@ function get_x_rotmatrix(angle) {
     var cos = Math.cos(angle);
     var sin = Math.sin(angle);
     return [1,0,0,
-	    0,cos,-sin,
-	    0,sin,cos];
+            0,cos,-sin,
+            0,sin,cos];
 }
 
 function get_y_rotmatrix(angle) {
     var cos = Math.cos(angle);
     var sin = Math.sin(angle);
     return [cos,0,sin,
-	    0,1,0,
-	    -sin,0,cos];
+            0,1,0,
+            -sin,0,cos];
 }
 
 function get_z_rotmatrix(angle) {
     var cos = Math.cos(angle);
     var sin = Math.sin(angle);
     return [cos,-sin,0,
-	    sin,cos,0,
-	    0,0,1];
+            sin,cos,0,
+            0,0,1];
 }
 
 function get_combined_rotmatrix(angles) {
@@ -1571,27 +1571,27 @@ function handle_key(e, canvas, ctx) {
     var rot;
 
     var rotx = [1,0,0,
-		0,0,-1,
-		0,1,0];
+                0,0,-1,
+                0,1,0];
     var roty = [0,0,1,
-		0,1,0,
-		-1,0,0];
+                0,1,0,
+                -1,0,0];
     var rotz = [0,-1,0,
-		1,0,0,
-		0,0,1];
+                1,0,0,
+                0,0,1];
 
     var invert = function(m) {
-	var r = new Array(9);
-	r[0] = m[0];
-	r[1] = -m[1];
-	r[2] = -m[2];
-	r[3] = -m[3];
-	r[4] = m[4];
-	r[5] = -m[5];
-	r[6] = -m[6];
-	r[7] = -m[7];
-	r[8] = m[8];
-	return r;
+        var r = new Array(9);
+        r[0] = m[0];
+        r[1] = -m[1];
+        r[2] = -m[2];
+        r[3] = -m[3];
+        r[4] = m[4];
+        r[5] = -m[5];
+        r[6] = -m[6];
+        r[7] = -m[7];
+        r[8] = m[8];
+        return r;
     };
 
     switch(e.which) {
@@ -1635,7 +1635,7 @@ function handle_key(e, canvas, ctx) {
     }
 
     if(rotate_flag) {
-	STATE.new_matrix = matmult(rot, STATE.new_matrix);
+        STATE.new_matrix = matmult(rot, STATE.new_matrix);
         nvoxels = project_voxels(STATE.piece, STATE.new_x,STATE.new_y,STATE.new_z, STATE.new_matrix);
         var deltas = overlap_diff(nvoxels, PIT_WIDTH,PIT_HEIGHT,PIT_DEPTH);
         STATE.new_x += deltas[0];
@@ -1726,20 +1726,20 @@ function game_loop(canvas, ctx) {
     STATE.current_z = STATE.start_z + STATE.progress*(STATE.new_z - STATE.start_z);
 
     if (STATE.progress >= 1) {
-	STATE.current_matrix = STATE.new_matrix;
-	STATE.new_angles = [0,0,0];
+        STATE.current_matrix = STATE.new_matrix;
+        STATE.new_angles = [0,0,0];
     }
     else {
-	var angles = [STATE.progress*STATE.new_angles[0],
-		      STATE.progress*STATE.new_angles[1],
-		      STATE.progress*STATE.new_angles[2]];
-	STATE.current_matrix = matmult(get_combined_rotmatrix(angles), STATE.start_matrix);
+        var angles = [STATE.progress*STATE.new_angles[0],
+                      STATE.progress*STATE.new_angles[1],
+                      STATE.progress*STATE.new_angles[2]];
+        STATE.current_matrix = matmult(get_combined_rotmatrix(angles), STATE.start_matrix);
     }
 
     // render
     if (STATE.progress != prev_progress || STATE.pause_ended_flag) {
-	STATE.pause_ended_flag = 0;
-	render_frame(canvas, ctx);
+        STATE.pause_ended_flag = 0;
+        render_frame(canvas, ctx);
     }
 }
 
@@ -1759,23 +1759,23 @@ function reset(canvas, ctx) {
     STATE.current_y = 0;
     STATE.current_z = 0;
     STATE.current_matrix = [1,0,0,
-			    0,1,0,
-			    0,0,1];
+                            0,1,0,
+                            0,0,1];
 
     STATE.new_x = 0;
     STATE.new_y = 0;
     STATE.new_z = 0;
     STATE.new_matrix = [1,0,0,
-			0,1,0,
-			0,0,1];
+                        0,1,0,
+                        0,0,1];
     STATE.new_angles = [0,0,0];
 
     STATE.start_x = 0;
     STATE.start_y = 0;
     STATE.start_z = 0;
     STATE.start_matrix = [1,0,0,
-			  0,1,0,
-			  0,0,1];
+                          0,1,0,
+                          0,0,1];
 
     STATE.progress = 0;
 
@@ -1792,8 +1792,8 @@ function set_start(keep_angles) {
 
     // snap to final rotated position
     if (!keep_angles) {
-	STATE.current_matrix = STATE.new_matrix;
-	STATE.new_angles = [0,0,0];
+        STATE.current_matrix = STATE.new_matrix;
+        STATE.new_angles = [0,0,0];
     }
 
     STATE.start_matrix = STATE.current_matrix;
@@ -2152,3 +2152,8 @@ $(document).ready(function(){
 
     refresh_column();
 });
+
+
+// Local variables:
+// indent-tabs-mode: nil
+// End:
